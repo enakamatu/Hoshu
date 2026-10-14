@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>{% block title %}Hoshu (保守) — Operations Cockpit{% endblock %}</title>
+    <!-- Early theme & sidebar check to prevent flicker -->
+    <script>
+      (function() {
+        try {
+          const theme = localStorage.getItem('hoshu_theme') || 'light';
+          if (theme === 'dark') {
+            document.documentElement.setAttribute('data-bs-theme', 'dark');
+            document.documentElement.classList.add('theme-dark');
+          } else {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            document.documentElement.classList.remove('theme-dark');
+          }
+          if (localStorage.getItem('hoshu_sidebar_collapsed') === 'true') {
+            document.documentElement.classList.add('sidebar-collapsed');
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <!-- Tabler Core & Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+    <style>
+      :root {
+        --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      .badge-running { background-color: #2fb344; color: #fff; }
+      .badge-stopped { background-color: #6c757d; color: #fff; }
+      .badge-pending { background-color: #f76707; color: #fff; }
+      .badge-error   { background-color: #d63939; color: #fff; }
+
+      /* ========================================================
+         1. TEMA CLARO (LIGHT THEME) — SIDEBAR ADAPTÁVEL COM ALTO DESTAQUE
+         ======================================================== */
+      html:not(.theme-dark) body:not(.theme-dark) {
+        background-color: #f4f6fa !important;
+      }
+
+      html:not(.theme-dark) #main-sidebar {
+        background-color: #ffffff !important;
+        border-right: 1px solid #cbd5e1 !important;
+        box-shadow: 3px 0 18px rgba(15, 23, 42, 0.05) !important;
+        z-index: 1020;
+      }
+
+      html:not(.theme-dark) #main-sidebar .sidebar-header-box {
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      html:not(.theme-dark) #main-sidebar .navbar-brand {
+        color: #0f172a !important;
+      }
+
+      html:not(.theme-dark) #main-sidebar .nav-item {
+        margin: 4px 10px;
+      }
+
+      html:not(.theme-dark) #main-sidebar .nav-link {
+        color: #475569 !important;
+        font-weight: 500;
+        font-size: 0.875rem;
+        border-radius: 8px;
+        padding: 0.65rem 0.85rem;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+      }
+
+      html:not(.theme-dark) #main-sidebar .nav-link-icon {
+        color: #64748b !important;
+        font-size: 1.15rem;
+        transition: color 0.2s ease, transform 0.2s ease;
+      }
+
+      html:not(.theme-dark) #main-sidebar .nav-link:hover {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+        border-color: #e2e8f0;
+      }
+
+      html:not(.theme-dark) #main-sidebar .nav-link:hover .nav-link-icon {
+        color: #2563eb !important;
+        transform: translateX(2px);
+      }
+
+      html:not(.theme-dark) #main-sidebar .nav-item.active .nav-link,
+      html:not(.theme-dark) #main-sidebar .nav-link.active {
+        background-color: #e0edff !important;
+        color: #1d4ed8 !important;
+        font-weight: 600;
+        border-left: 3.5px solid #2563eb !important;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12) !important;
+      }
+
+      html:not(.theme-dark) #main-sidebar .nav-item.active .nav-link .nav-link-icon,
+      html:not(.theme-dark) #main-sidebar .nav-link.active .nav-link-icon {
+        color: #2563eb !important;
+      }
+
+      html:not(.theme-dark) #sidebar-collapse-icon {
+        color: #64748b;
+      }
+
+      /* ========================================================
+         2. TEMA ESCURO (DARK THEME) — SIDEBAR OBSIDIAN NAVY
+         ======================================================== */
+      html.theme-dark body.theme-dark,
+      body.theme-dark {
+        background-color: #0b1120 !important;
+      }
+
+      html.theme-dark #main-sidebar,
+      body.theme-dark #main-sidebar {
+        background: linear-gradient(180deg, #090e1a 0%, #111827 50%, #0f172a 100%) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 4px 0 25px rgba(0, 0, 0, 0.3) !important;
+        z-index: 1020;
+      }
+
+      html.theme-dark #main-sidebar .sidebar-header-box,
+      body.theme-dark #main-sidebar .sidebar-header-box {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      html.theme-dark #main-sidebar .navbar-brand,
+      body.theme-dark #main-sidebar .navbar-brand {
+        color: #ffffff !important;
+      }
+
+      html.theme-dark #main-sidebar .nav-item,
+      body.theme-dark #main-sidebar .nav-item {
+        margin: 4px 10px;
+      }
+
+      html.theme-dark #main-sidebar .nav-link,
+      body.theme-dark #main-sidebar .nav-link {
+        color: #94a3b8 !important;
+        font-weight: 500;
+        font-size: 0.875rem;
+        border-radius: 8px;
+        padding: 0.65rem 0.85rem;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+      }
+
+      html.theme-dark #main-sidebar .nav-link-icon,
+      body.theme-dark #main-sidebar .nav-link-icon {
+        color: #64748b !important;
+        font-size: 1.15rem;
+        transition: color 0.2s ease, transform 0.2s ease;
+      }
+
+      html.theme-dark #main-sidebar .nav-link:hover,
+      body.theme-dark #main-sidebar .nav-link:hover {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #f8fafc !important;
+        border-color: rgba(255, 255, 255, 0.05);
+      }
+
+      html.theme-dark #main-sidebar .nav-link:hover .nav-link-icon,
+      body.theme-dark #main-sidebar .nav-link:hover .nav-link-icon {
+        color: #38bdf8 !important;
+        transform: translateX(2px);
+      }
+
+      html.theme-dark #main-sidebar .nav-item.active .nav-link,
+      html.theme-dark #main-sidebar .nav-link.active,
+      body.theme-dark #main-sidebar .nav-item.active .nav-link,
+      body.theme-dark #main-sidebar .nav-link.active {
+        background: linear-gradient(90deg, rgba(14, 165, 233, 0.22) 0%, rgba(14, 165, 233, 0.06) 100%) !important;
+        color: #ffffff !important;
+        font-weight: 600;
+        border-left: 3.5px solid #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.15);
+      }
+
+      html.theme-dark #main-sidebar .nav-item.active .nav-link .nav-link-icon,
+      html.theme-dark #main-sidebar .nav-link.active .nav-link-icon,
+      body.theme-dark #main-sidebar .nav-item.active .nav-link .nav-link-icon,
+      body.theme-dark #main-sidebar .nav-link.active .nav-link-icon {
+        color: #38bdf8 !important;
+      }
+
+      html.theme-dark #sidebar-collapse-icon,
+      body.theme-dark #sidebar-collapse-icon {
+        color: #94a3b8;
+      }
+
+      /* ========================================================
+         3. DESKTOP SIDEBAR COLLAPSE
+         ======================================================== */
+      @media (min-width: 992px) {
+        aside.navbar-vertical {
+          transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .page-wrapper {
+          transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.sidebar-collapsed aside.navbar-vertical,
+        html.sidebar-collapsed aside.navbar-vertical {
+          width: 4.5rem !important;
+        }
+        body.sidebar-collapsed aside.navbar-vertical .navbar-brand .brand-text,
+        body.sidebar-collapsed aside.navbar-vertical .nav-link-title,
+        html.sidebar-collapsed aside.navbar-vertical .navbar-brand .brand-text,
+        html.sidebar-collapsed aside.navbar-vertical .nav-link-title {
+          display: none !important;
+        }
+        body.sidebar-collapsed aside.navbar-vertical .navbar-brand,
+        html.sidebar-collapsed aside.navbar-vertical .navbar-brand {
+          justify-content: center;
+          padding-left: 0;
+          padding-right: 0;
+        }
+        body.sidebar-collapsed #main-sidebar .nav-item,
+        html.sidebar-collapsed #main-sidebar .nav-item {
+          margin: 4px 6px;
+        }
+        body.sidebar-collapsed aside.navbar-vertical .nav-link,
+        html.sidebar-collapsed aside.navbar-vertical .nav-link {
+          justify-content: center;
+          padding: 0.75rem 0;
+          border-left: none !important;
+        }
+        body.sidebar-collapsed aside.navbar-vertical .nav-link-icon,
+        html.sidebar-collapsed aside.navbar-vertical .nav-link-icon {
+          margin-right: 0 !important;
+          font-size: 1.35rem;
+        }
+        body.sidebar-collapsed #main-sidebar .nav-item.active .nav-link,
+        html.sidebar-collapsed #main-sidebar .nav-item.active .nav-link {
+          border-left: none !important;
+        }
+        body.sidebar-collapsed .page-wrapper,
+        html.sidebar-collapsed .page-wrapper {
+          margin-left: 4.5rem !important;
+        }
+      }
+
+      /* ========================================================
+         4. FLOATING TOAST NOTIFICATIONS (TABLER / BOOTSTRAP 5)
+         ======================================================== */
+      .toast-container {
+        pointer-events: none;
+      }
+      .toast-container .toast {
+        pointer-events: auto;
+        min-width: 320px;
+        max-width: 420px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+      }
+      html.theme-dark .toast-container .toast,
+      body.theme-dark .toast-container .toast {
+        background-color: #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #f1f5f9 !important;
+      }
+      html.theme-dark .toast-container .toast .toast-header,
+      body.theme-dark .toast-container .toast .toast-header {
+        background-color: #0f172a !important;
+        border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+        color: #f8fafc !important;
+      }
+    </style>
+    {% block head %}{% endblock %}
+  </head>
+  <body class="layout-fluid">
+    <div class="page">
+      <!-- Sidebar Adaptável com Links Separados -->
+      <aside class="navbar navbar-vertical navbar-expand-lg" id="main-sidebar">
+        <div class="container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          
+          <div class="d-flex align-items-center justify-content-between w-100 py-2 sidebar-header-box">
+            <h1 class="navbar-brand navbar-brand-autodark mb-0">
+              <a href="/" class="d-flex align-items-center text-decoration-none">
+                <span class="text-primary me-2 brand-icon"><i class="ti ti-shield-code fs-1"></i></span>
+                <span class="brand-text">
+                  <span class="fw-bold">Hoshu</span> <small class="text-muted ms-1" style="font-size: 0.65rem;">保守 v1.0</small>
+                </span>
+              </a>
+            </h1>
+            <!-- Botão de colapso no menu lateral -->
+            <button class="btn btn-sm btn-icon btn-ghost-secondary d-none d-lg-inline-flex" onclick="toggleSidebarCollapse()" title="Recolher / Expandir Menu Lateral">
+              <i id="sidebar-collapse-icon" class="ti ti-layout-sidebar-left-collapse"></i>
+            </button>
+          </div>
+
+          <div class="collapse navbar-collapse" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-2">
+              <li class="nav-item {% if active_page == 'cockpit' %}active{% endif %}">
+                <a class="nav-link" href="/" title="Cockpit Operacional">
+                  <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-layout-dashboard"></i></span>
+                  <span class="nav-link-title">Cockpit Operacional</span>
+                </a>
+              </li>
+              <li class="nav-item {% if active_page == 'services' %}active{% endif %}">
+                <a class="nav-link" href="/services" title="Serviços Windows">
+                  <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-server-cog"></i></span>
+                  <span class="nav-link-title">Serviços Windows</span>
+                </a>
+              </li>
+              <li class="nav-item {% if active_page == 'patch' %}active{% endif %}">
+                <a class="nav-link" href="/patch" title="Pipeline de Patches">
+                  <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-package-import"></i></span>
+                  <span class="nav-link-title">Pipeline de Patches</span>
+                </a>
+              </li>
+              <li class="nav-item {% if active_page == 'devops' %}active{% endif %}">
+                <a class="nav-link" href="/devops" title="DevOps & Build">
+                  <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-git-branch"></i></span>
+                  <span class="nav-link-title">DevOps & Build</span>
+                </a>
+              </li>
+              <li class="nav-item {% if active_page == 'backups' %}active{% endif %}">
+                <a class="nav-link" href="/backups" title="Snapshots / Backups">
+                  <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-archive"></i></span>
+                  <span class="nav-link-title">Snapshots / Backups</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+
+      <div class="page-wrapper">
+        <!-- Top Header Cockpit stats com Profile do Usuário -->
+        <header class="navbar navbar-expand-md navbar-light d-none d-lg-flex d-print-none border-bottom">
+          <div class="container-xl justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-sm btn-icon btn-ghost-secondary me-2" onclick="toggleSidebarCollapse()" title="Recolher / Expandir Menu Lateral">
+                <i class="ti ti-menu-2 fs-2"></i>
+              </button>
+              <div class="d-flex align-items-center text-muted">
+                <i class="ti ti-device-desktop me-1"></i>
+                <span class="fw-bold me-1">Host:</span>
+                <span id="header-hostname">{{ host_name }}</span>
+              </div>
+              <div class="vr mx-2"></div>
+              <div class="d-flex align-items-center">
+                <i class="ti ti-user-shield me-1"></i>
+                <span class="fw-bold me-1">Privilégio:</span>
+                {% if is_admin %}
+                  <span class="badge bg-success-lt"><i class="ti ti-check me-1"></i>Administrador</span>
+                {% else %}
+                  <span class="badge bg-warning-lt"><i class="ti ti-alert-triangle me-1"></i>Usuário Padrão</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+              <!-- Relógio do Servidor -->
+              <div class="text-muted d-flex align-items-center">
+                <i class="ti ti-clock me-1"></i>
+                <span id="server-clock">{{ server_time }}</span>
+              </div>
+              <div class="vr"></div>
+
+              <!-- Profile do Usuário com Controle de Tema Dark / White -->
+              <div class="nav-item dropdown">
+                <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Abrir menu do usuário">
+                  <span class="avatar avatar-sm bg-primary-lt text-primary fw-bold rounded-circle">
+                    <i class="ti ti-user"></i>
+                  </span>
+                  <div class="d-none d-xl-block ps-2 text-start">
+                    <div class="fw-bold">Operador Hoshu</div>
+                    <div class="mt-1 small text-muted">
+                      {% if is_admin %}Administrador{% else %}Usuário Padrão{% endif %}
+                    </div>
+                  </div>
+                  <i class="ti ti-chevron-down ms-2 text-muted small"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow shadow-sm">
+                  <div class="dropdown-header">Perfil & Preferências</div>
+                  
+                  <!-- Controle de Tema Dark / White -->
+                  <div class="dropdown-item d-flex justify-content-between align-items-center py-2" style="cursor: pointer;" onclick="toggleTheme(event)">
+                    <span class="d-flex align-items-center">
+                      <i id="theme-dropdown-icon" class="ti ti-moon me-2 fs-2 text-primary"></i>
+                      <span id="theme-dropdown-text">Tema Escuro</span>
+                    </span>
+                    <span class="form-check form-switch m-0 ms-3" onclick="event.stopPropagation()">
+                      <input class="form-check-input" type="checkbox" id="theme-switch" onchange="handleThemeSwitch(this)">
+                    </span>
+                  </div>
+
+                  <div class="dropdown-divider"></div>
+                  <div class="dropdown-item text-muted small py-1 disabled">
+                    <i class="ti ti-server me-2"></i>Host: {{ host_name }}
+                  </div>
+                  <div class="dropdown-item text-muted small py-1 disabled">
+                    <i class="ti ti-shield-lock me-2"></i>{% if is_admin %}Acesso Elevado{% else %}Acesso Restrito{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="page-body">
+          <div class="container-xl">
+            {% block content %}{% endblock %}
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Toast Container Global para Notificações Flutuantes -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;" id="hoshu-toast-container"></div>
+
+    <!-- Tabler Core JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+    <script>
+      // Sistema Centralizado de Notificações Toast
+      window.showToast = function(type, title, message, duration = 4500) {
+        const container = document.getElementById('hoshu-toast-container');
+        if (!container) return;
+
+        const validTypes = {
+          success: { icon: 'ti-circle-check', color: 'success', border: '#2fb344', defaultTitle: 'Sucesso' },
+          danger:  { icon: 'ti-alert-circle', color: 'danger',  border: '#d63939', defaultTitle: 'Erro' },
+          error:   { icon: 'ti-alert-circle', color: 'danger',  border: '#d63939', defaultTitle: 'Erro' },
+          warning: { icon: 'ti-alert-triangle', color: 'warning', border: '#f76707', defaultTitle: 'Aviso' },
+          info:    { icon: 'ti-info-circle',  color: 'primary', border: '#206bc4', defaultTitle: 'Informação' }
+        };
+
+        const conf = validTypes[type] || validTypes.info;
+        const toastTitle = title || conf.defaultTitle;
+
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast mb-2 show';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.style.borderLeft = `4.5px solid ${conf.border}`;
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'toast-header d-flex align-items-center';
+
+        const iconEl = document.createElement('i');
+        iconEl.className = `ti ${conf.icon} text-${conf.color} fs-2 me-2`;
+
+        const titleEl = document.createElement('strong');
+        titleEl.className = `me-auto text-${conf.color}`;
+        titleEl.textContent = toastTitle;
+
+        const timeEl = document.createElement('small');
+        timeEl.className = 'text-muted ms-2';
+        timeEl.textContent = new Date().toLocaleTimeString('pt-BR');
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-close ms-2';
+        closeBtn.setAttribute('data-bs-dismiss', 'toast');
+        closeBtn.setAttribute('aria-label', 'Fechar');
+
+        headerDiv.appendChild(iconEl);
+        headerDiv.appendChild(titleEl);
+        headerDiv.appendChild(timeEl);
+        headerDiv.appendChild(closeBtn);
+
+        const bodyDiv = document.createElement('div');
+        bodyDiv.className = 'toast-body text-break';
+        bodyDiv.textContent = message || '';
+
+        toastEl.appendChild(headerDiv);
+        toastEl.appendChild(bodyDiv);
+
+        container.appendChild(toastEl);
+
+        if (window.bootstrap && window.bootstrap.Toast) {
+          const bsToast = new bootstrap.Toast(toastEl, { delay: duration, autohide: duration > 0 });
+          toastEl.addEventListener('hidden.bs.toast', () => {
+            toastEl.remove();
+          });
+          bsToast.show();
+        } else {
+          closeBtn.onclick = () => {
+            toastEl.classList.remove('show');
+            setTimeout(() => toastEl.remove(), 200);
+          };
+          if (duration > 0) {
+            setTimeout(() => {
+              toastEl.classList.remove('show');
+              setTimeout(() => toastEl.remove(), 250);
+            }, duration);
+          }
+        }
+      };
+
+      // Compatibilidade retroativa para chamadas showAlert
+      window.showAlert = function(type, title, message) {
+        window.showToast(type, title, message);
+      };
+
+      // Sincroniza relógio
+      function updateClock() {
+        const now = new Date();
+        const clockEl = document.getElementById('server-clock');
+        if (clockEl) clockEl.innerText = now.toLocaleTimeString('pt-BR');
+      }
+      setInterval(updateClock, 1000);
+
+      // Controle de Tema Dark / White dinâmico que atualiza o menu lateral
+      function applyTheme(theme) {
+        const isDark = theme === 'dark';
+        const sidebar = document.getElementById('main-sidebar');
+
+        if (isDark) {
+          document.body.classList.add('theme-dark');
+          document.documentElement.classList.add('theme-dark');
+          document.body.setAttribute('data-bs-theme', 'dark');
+          document.documentElement.setAttribute('data-bs-theme', 'dark');
+          if (sidebar) {
+            sidebar.classList.remove('navbar-light');
+            sidebar.classList.add('navbar-dark');
+          }
+        } else {
+          document.body.classList.remove('theme-dark');
+          document.documentElement.classList.remove('theme-dark');
+          document.body.setAttribute('data-bs-theme', 'light');
+          document.documentElement.setAttribute('data-bs-theme', 'light');
+          if (sidebar) {
+            sidebar.classList.remove('navbar-dark');
+            sidebar.classList.add('navbar-light');
+          }
+        }
+        localStorage.setItem('hoshu_theme', theme);
+
+        const themeSwitch = document.getElementById('theme-switch');
+        const themeText = document.getElementById('theme-dropdown-text');
+        const themeIcon = document.getElementById('theme-dropdown-icon');
+
+        if (themeSwitch) themeSwitch.checked = isDark;
+        if (themeText) themeText.innerText = isDark ? 'Tema Claro' : 'Tema Escuro';
+        if (themeIcon) {
+          themeIcon.className = isDark ? 'ti ti-sun me-2 fs-2 text-warning' : 'ti ti-moon me-2 fs-2 text-primary';
+        }
+      }
+
+      function toggleTheme(event) {
+        if (event) event.preventDefault();
+        const isDark = document.body.classList.contains('theme-dark') || document.documentElement.classList.contains('theme-dark');
+        applyTheme(isDark ? 'light' : 'dark');
+      }
+
+      function handleThemeSwitch(input) {
+        applyTheme(input.checked ? 'dark' : 'light');
+      }
+
+      // Controle de Colapso do Menu Lateral persistente
+      function toggleSidebarCollapse() {
+        const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
+        document.documentElement.classList.toggle('sidebar-collapsed', isCollapsed);
+        localStorage.setItem('hoshu_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        updateSidebarCollapseIcon(isCollapsed);
+      }
+
+      function updateSidebarCollapseIcon(isCollapsed) {
+        const icon = document.getElementById('sidebar-collapse-icon');
+        if (icon) {
+          icon.className = isCollapsed ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
+        }
+      }
+
+      // Inicialização no DOM
+      document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('hoshu_theme') || 'light';
+        applyTheme(savedTheme);
+
+        const isCollapsed = localStorage.getItem('hoshu_sidebar_collapsed') === 'true';
+        if (isCollapsed) {
+          document.body.classList.add('sidebar-collapsed');
+          document.documentElement.classList.add('sidebar-collapsed');
+        }
+        updateSidebarCollapseIcon(isCollapsed);
+      });
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

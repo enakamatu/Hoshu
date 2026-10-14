@@ -1,6 +1,13 @@
 # Regras do Projeto Hoshu (保守)
 
-Você é o assistente sênior de desenvolvimento do projeto Hoshu. O objetivo é gerenciar serviços Windows cadastrados, automatizar a aplicação de patches no ERP e orquestrar compilação/DevOps com Git.
+## stack
+- python.
+- flask.
+- sqlite.
+- Tabler.io.
+
+
+
 
 ## Diretrizes de Contexto
 - Consulte sempre as regras de negócio em `docs/prd/prd-hoshu.md`.

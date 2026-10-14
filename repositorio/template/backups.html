@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Hoshu — Snapshots e Backups{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <h2 class="page-title">
+        <i class="ti ti-archive me-2 text-success"></i>Snapshots e Backups do Repositório (RPO)
+      </h2>
+      <div class="text-muted mt-1">
+        Histórico de snapshots compactados (.zip) criados antes de cada intervenção e disponíveis para restauração imediata.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics Cards dos Backups -->
+<div class="row row-deck row-cards mb-4">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader text-primary">Snapshots Disponíveis</div>
+        <div class="h1 mb-0 mt-2 text-primary">{{ backups|length }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader text-success">Diretório de Armazenamento</div>
+        <div class="h3 mb-0 mt-2 text-truncate text-muted">C:\hoshu\backups\</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader text-info">Algoritmo de Integridade</div>
+        <div class="h3 mb-0 mt-2 text-muted">SHA-256 + CRC-32</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela de Snapshots -->
+<div class="card shadow-sm" id="backups-card">
+  <div class="card-header justify-content-between">
+    <h3 class="card-title">
+      <i class="ti ti-history me-2 text-primary"></i>Arquivos de Backup Compactados
+    </h3>
+    <span class="badge bg-green-lt">{{ backups|length }} arquivos</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table card-table table-vcenter">
+      <thead>
+        <tr>
+          <th>Nome do Snapshot (.zip)</th>
+          <th>Tamanho</th>
+          <th>Data / Hora de Geração</th>
+          <th class="text-end">Status de Integridade</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if backups %}
+          {% for b in backups %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <i class="ti ti-file-zip fs-2 text-warning me-2"></i>
+                <div>
+                  <strong>{{ b.name }}</strong>
+                  <div class="text-muted small">Snapshot completo com manifesto</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge bg-secondary-lt">{{ (b.size / 1024)|round(1) }} KB</span></td>
+            <td>{{ b.mtime }}</td>
+            <td class="text-end">
+              <span class="badge bg-success"><i class="ti ti-check me-1"></i>Íntegro</span>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-5">
+              <i class="ti ti-archive-off fs-1 d-block mb-2 text-secondary"></i>
+              Nenhum snapshot de backup gerado ainda. Snapshots são criados automaticamente antes de cada aplicação de patch.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

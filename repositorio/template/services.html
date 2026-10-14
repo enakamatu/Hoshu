@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Hoshu — Serviços Windows Monitorados{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <h2 class="page-title">
+        <i class="ti ti-server-cog me-2 text-primary"></i>Gerenciamento de Serviços Windows
+      </h2>
+    </div>
+    <div class="col-auto ms-auto d-print-none d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-success" onclick="executeBatchAction('start')"
+        title="Iniciar todos em ordem crescente (1 ➔ 5)">
+        <i class="ti ti-player-play-filled me-1"></i>Iniciar Todos (1 ➔ N)
+      </button>
+      <button class="btn btn-outline-danger" onclick="executeBatchAction('stop')"
+        title="Parar todos em ordem inversa (5 ➔ 1) conforme RF01">
+        <i class="ti ti-player-stop-filled me-1"></i>Parar Todos (N ➔ 1)
+      </button>
+      <button class="btn btn-outline-warning" onclick="executeBatchAction('restart')"
+        title="Reiniciar todos (Parada 5 ➔ 1 e Subida 1 ➔ 5)">
+        <i class="ti ti-rotate-clockwise me-1"></i>Reiniciar Todos
+      </button>
+      <button class="btn btn-primary" onclick="refreshServices()" title="Atualizar Status dos Serviços">
+        <i class="ti ti-refresh me-1"></i>Atualizar
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Metrics Cards dos Serviços -->
+<div class="row row-deck row-cards mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Serviços Declarados</div>
+        <div class="h1 mb-0 mt-2" id="metric-total">{{ services|length }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader text-success">Em Execução</div>
+        <div class="h1 mb-0 mt-2 text-success" id="metric-running">-</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader text-secondary">Parados</div>
+        <div class="h1 mb-0 mt-2 text-secondary" id="metric-stopped">-</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader text-info">Arquivo de Origem</div>
+        <div class="h3 mb-0 mt-2 text-truncate text-muted">config/services.json</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela de Serviços -->
+<div class="card shadow-sm" id="services-card">
+  <div class="card-header justify-content-between">
+    <h3 class="card-title">
+      <i class="ti ti-list-check me-2 text-primary"></i>Lista de Serviços ERP Monitorados
+    </h3>
+    <span class="badge bg-blue-lt">Ordem de Parada Inversa (RF01)</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table card-table table-vcenter text-nowrap datatable">
+      <thead>
+        <tr>
+          <th class="w-1">Ordem</th>
+          <th>Identificador</th>
+          <th>Serviço Windows</th>
+          <th>Status</th>
+          <th class="text-end">Ações de Controle</th>
+        </tr>
+      </thead>
+      <tbody id="services-table-body">
+        {% for svc in services %}
+        <tr id="row-{{ svc.id }}">
+          <td><span class="badge bg-secondary-lt fw-bold">{{ svc.order }}</span></td>
+          <td><strong>{{ svc.display_name }}</strong></td>
+          <td><code>{{ svc.service_name }}</code></td>
+          <td id="status-col-{{ svc.id }}">
+            <span class="badge bg-secondary"><i class="ti ti-loader me-1"></i>Consultando...</span>
+          </td>
+          <td class="text-end">
+            <div class="btn-group" role="group">
+              <button class="btn btn-sm btn-outline-success" onclick="executeServiceAction('{{ svc.id }}', 'start')"
+                title="Iniciar Serviço">
+                <i class="ti ti-player-play"></i> Start
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="executeServiceAction('{{ svc.id }}', 'stop')"
+                title="Parar Serviço">
+                <i class="ti ti-player-stop"></i> Stop
+              </button>
+              <button class="btn btn-sm btn-outline-warning" onclick="executeServiceAction('{{ svc.id }}', 'restart')"
+                title="Reiniciar Serviço">
+                <i class="ti ti-rotate-clockwise"></i> Restart
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function renderStatusBadge(state) {
+    switch (state) {
+      case 'RUNNING':
+        return '<span class="badge bg-success"><i class="ti ti-check me-1"></i>Running</span>';
+      case 'STOPPED':
+        return '<span class="badge bg-secondary"><i class="ti ti-player-stop me-1"></i>Stopped</span>';
+      case 'START_PENDING':
+        return '<span class="badge bg-warning"><i class="ti ti-loader me-1"></i>Start Pending</span>';
+      case 'STOP_PENDING':
+        return '<span class="badge bg-warning"><i class="ti ti-loader me-1"></i>Stop Pending</span>';
+      case 'NOT_INSTALLED':
+        return '<span class="badge bg-danger"><i class="ti ti-alert-circle me-1"></i>Não Instalado</span>';
+      default:
+        return `<span class="badge bg-danger"><i class="ti ti-alert-circle me-1"></i>${state}</span>`;
+    }
+  }
+
+  async function refreshServices() {
+    try {
+      const res = await fetch('/api/services');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar serviços.');
+
+      let running = 0;
+      let stopped = 0;
+
+      data.services.forEach(svc => {
+        const col = document.getElementById(`status-col-${svc.id}`);
+        if (col) {
+          col.innerHTML = renderStatusBadge(svc.state);
+        }
+        if (svc.state === 'RUNNING') running++;
+        if (svc.state === 'STOPPED') stopped++;
+      });
+
+      document.getElementById('metric-running').innerText = running;
+      document.getElementById('metric-stopped').innerText = stopped;
+    } catch (err) {
+      console.error(err);
+      showToast('danger', 'Falha ao atualizar status', err.message);
+    }
+  }
+
+  async function executeServiceAction(serviceId, action) {
+    try {
+      const col = document.getElementById(`status-col-${serviceId}`);
+      if (col) {
+        col.innerHTML = '<span class="badge bg-warning"><i class="ti ti-loader me-1"></i>Processando...</span>';
+      }
+
+      const res = await fetch(`/api/services/${encodeURIComponent(serviceId)}/${action}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Erro ao executar ação '${action}'.`);
+      }
+
+      showToast('success', 'Comando Executado', `Serviço ${serviceId} — Novo estado: ${data.state}`);
+      await refreshServices();
+    } catch (err) {
+      showToast('danger', `Erro na ação '${action}'`, err.message);
+      await refreshServices();
+    }
+  }
+
+  async function executeBatchAction(action) {
+    const actionLabel = action === 'start' ? 'Iniciar Todos (1 ➔ N)' : (action === 'stop' ? 'Parar Todos (N ➔ 1)' : 'Reiniciar Todos');
+    if (!confirm(`Deseja realmente executar "${actionLabel}" em todos os serviços?`)) {
+      return;
+    }
+
+    try {
+      document.querySelectorAll('[id^="status-col-"]').forEach(col => {
+        col.innerHTML = '<span class="badge bg-warning"><i class="ti ti-loader me-1"></i>Processando lote...</span>';
+      });
+
+      showToast('info', 'Processamento em Lote', `Executando ${actionLabel}. Acompanhe o log no terminal.`);
+
+      const res = await fetch(`/api/services/batch/${action}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Erro ao executar ação em lote '${action}'.`);
+      }
+
+      showToast('success', 'Operação em Lote Concluída', data.message);
+      await refreshServices();
+    } catch (err) {
+      showToast('danger', 'Falha na Operação em Lote', err.message);
+      await refreshServices();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshServices();
+  });
+</script>
+{% endblock %}

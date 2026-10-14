@@ -1,11 +1,13 @@
 
-```markdown
+
 # UI Specifications — Painel Hoshu
 
 ## 1. framework
 - Tabler.io
 - tema dark ou white
+- menu vertical com colapse
 
+ 
 ## 2. Visão Geral da Interface
 Painel com layout focado em cockpit operacional, com feedback de status por cor:
 - **Verde:** Serviço rodando (`Running`) / Build sucesso.

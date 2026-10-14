@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Hoshu — DevOps & Automação Git{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <h2 class="page-title">
+        <i class="ti ti-git-branch me-2 text-info"></i>DevOps & Esteira de Compilação Git
+      </h2>
+      <div class="text-muted mt-1">
+        Sincronização com repositório Git local/remoto e execução isolada do compilador CLI com streaming de logs em tempo real.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row row-cards">
+  <!-- Configuração de Build -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">
+        <h3 class="card-title"><i class="ti ti-adjustments me-2 text-primary"></i>Parâmetros de Build</h3>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label required">Branch ou Tag Git</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="ti ti-git-branch"></i></span>
+            <input type="text" class="form-control" id="devops-branch" value="main" placeholder="Ex: main ou release/2026.1"/>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Commit Hash Atual</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="ti ti-git-commit"></i></span>
+            <input type="text" class="form-control" id="devops-commit" value="HEAD (latest)" readonly/>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Workspace de Runtime (TRD)</label>
+          <input type="text" class="form-control" value="C:\hoshu\workspace\" readonly/>
+        </div>
+        <button class="btn btn-info w-100 py-2 fs-3 mt-2" id="btn-trigger-build" onclick="triggerBuild()">
+          <i class="ti ti-hammer me-1"></i>Disparar Compilação
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terminal de Streaming em Tempo Real -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header justify-content-between">
+        <h3 class="card-title">
+          <i class="ti ti-terminal-2 me-2 text-success"></i>Terminal de Compilação & Eventos (SSE)
+        </h3>
+        <div class="d-flex align-items-center gap-2">
+          <span id="stream-status" class="badge bg-secondary-lt" style="font-size: 0.75rem;">Conectando...</span>
+          <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()" title="Limpar Terminal">
+            <i class="ti ti-trash me-1"></i>Limpar
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="bg-dark text-light p-3" style="min-height: 380px; max-height: 520px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.82rem; overflow-y: auto;" id="devops-log">
+          <div class="text-secondary">[Hoshu SSE Terminal] Inicializando conexão de streaming de eventos em tempo real...</div>
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-between align-items-center text-muted small py-2">
+        <span>Canal: <code>system, services, devops</code></span>
+        <span>Reconexão automática ativa</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function clearLogs() {
+    const logBox = document.getElementById('devops-log');
+    logBox.innerHTML = '<div class="text-secondary">[Hoshu SSE Terminal] Terminal limpo pelo operador.</div>';
+  }
+
+  function appendLogLine(record) {
+    const logBox = document.getElementById('devops-log');
+    const entry = document.createElement('div');
+    entry.className = 'py-0';
+
+    let colorClass = 'text-light';
+    if (record.level === 'SUCCESS') colorClass = 'text-success';
+    else if (record.level === 'WARN') colorClass = 'text-warning';
+    else if (record.level === 'ERROR') colorClass = 'text-danger';
+    else if (record.level === 'INFO') colorClass = 'text-info';
+
+    const timeStr = record.timestamp ? `<span class="text-secondary me-1">[${record.timestamp}]</span>` : '';
+    const chStr = record.channel ? `<span class="text-muted me-1">[${record.channel}]</span>` : '';
+
+    entry.innerHTML = `${timeStr}${chStr}<span class="${colorClass}">${record.message}</span>`;
+    logBox.appendChild(entry);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function initLogStream() {
+    const statusBadge = document.getElementById('stream-status');
+    try {
+      const evtSource = new EventSource('/api/logs/stream');
+
+      evtSource.onopen = () => {
+        statusBadge.className = 'badge bg-success-lt';
+        statusBadge.innerHTML = '<span class="status-dot status-dot-animated bg-success me-1"></span>Conectado';
+      };
+
+      evtSource.onerror = () => {
+        statusBadge.className = 'badge bg-warning-lt';
+        statusBadge.innerHTML = '<span class="status-dot bg-warning me-1"></span>Reconectando...';
+      };
+
+      evtSource.addEventListener('connected', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          appendLogLine({ level: 'INFO', channel: 'stream', message: data.message, timestamp: '' });
+        } catch (_) {}
+      });
+
+      evtSource.addEventListener('log', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          appendLogLine(data);
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    } catch (err) {
+      statusBadge.className = 'badge bg-danger-lt';
+      statusBadge.innerText = 'Desconectado';
+    }
+  }
+
+  function triggerBuild() {
+    const branch = document.getElementById('devops-branch').value;
+    showToast('info', 'Compilação Solicitada', `Disparo de build na branch '${branch}'. Acompanhe no terminal SSE.`);
+    appendLogLine({
+      timestamp: new Date().toLocaleTimeString('pt-BR'),
+      channel: 'devops',
+      level: 'INFO',
+      message: `Disparo manual de build na branch '${branch}'. (A Sprint 2 implementará os comandos git fetch/pull e compilador CLI).`
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLogStream();
+  });
+</script>
+{% endblock %}

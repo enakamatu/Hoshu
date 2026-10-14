@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Hoshu (保守) — Cockpit Operacional{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <h2 class="page-title">
+        <i class="ti ti-layout-dashboard me-2 text-primary"></i>Cockpit Operacional — Visão Geral
+      </h2>
+      <div class="text-muted mt-1">
+        Monitoramento centralizado de serviços Windows, pipeline de patches e esteira DevOps.
+      </div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <button class="btn btn-primary" onclick="refreshServices()">
+        <i class="ti ti-refresh me-1"></i>Atualizar Cockpit
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Cards de Métricas Principais -->
+<div class="row row-deck row-cards mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <span class="bg-blue text-white avatar me-3"><i class="ti ti-server"></i></span>
+          <div>
+            <div class="font-weight-medium">Serviços Totais</div>
+            <div class="text-muted" id="metric-total">{{ services|length }} monitorados</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <span class="bg-green text-white avatar me-3"><i class="ti ti-player-play"></i></span>
+          <div>
+            <div class="font-weight-medium text-success">Em Execução</div>
+            <div class="h3 mb-0 text-success" id="metric-running">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <span class="bg-secondary text-white avatar me-3"><i class="ti ti-player-stop"></i></span>
+          <div>
+            <div class="font-weight-medium text-secondary">Parados</div>
+            <div class="h3 mb-0 text-secondary" id="metric-stopped">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <span class="bg-yellow text-white avatar me-3"><i class="ti ti-archive"></i></span>
+          <div>
+            <div class="font-weight-medium text-primary">Snapshots</div>
+            <div class="text-muted">{{ backups|length }} gerados</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Resumo dos Painéis com Acesso Rápido -->
+<div class="row row-cards mb-4">
+  <!-- Atalho Painel de Serviços -->
+  <div class="col-md-6 col-lg-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-header justify-content-between">
+        <h3 class="card-title">
+          <i class="ti ti-server-cog me-2 text-primary"></i>Serviços ERP
+        </h3>
+        <a href="/services" class="btn btn-sm btn-outline-primary">
+          Gerenciar Serviços <i class="ti ti-arrow-right ms-1"></i>
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+          <thead>
+            <tr>
+              <th>Ordem</th>
+              <th>Serviço</th>
+              <th>Status</th>
+              <th class="text-end">Ação Rápida</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for svc in services[:4] %}
+            <tr>
+              <td><span class="badge bg-secondary-lt">{{ svc.order }}</span></td>
+              <td><strong>{{ svc.display_name }}</strong></td>
+              <td id="status-col-{{ svc.id }}">
+                <span class="badge bg-secondary">Consultando...</span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-warning" onclick="executeServiceAction('{{ svc.id }}', 'restart')">
+                  <i class="ti ti-rotate-clockwise"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Atalhos Patch e DevOps -->
+  <div class="col-md-6 col-lg-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="ti ti-apps me-2 text-info"></i>Módulos de Operação
+        </h3>
+      </div>
+      <div class="card-body d-flex flex-column justify-content-around">
+        <div class="d-flex align-items-center justify-content-between p-3 rounded border mb-2">
+          <div class="d-flex align-items-center">
+            <span class="avatar bg-warning-lt text-warning me-3"><i class="ti ti-package-import fs-1"></i></span>
+            <div>
+              <h4 class="mb-1">Pipeline de Patches ERP</h4>
+              <div class="text-muted small">Aplicação segura com parada ordenada e rollback automático.</div>
+            </div>
+          </div>
+          <a href="/patch" class="btn btn-outline-warning">Abrir Módulo</a>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between p-3 rounded border">
+          <div class="d-flex align-items-center">
+            <span class="avatar bg-info-lt text-info me-3"><i class="ti ti-git-branch fs-1"></i></span>
+            <div>
+              <h4 class="mb-1">DevOps & Compilação Git</h4>
+              <div class="text-muted small">Pull, checkout e compilação CLI com logs em tempo real.</div>
+            </div>
+          </div>
+          <a href="/devops" class="btn btn-outline-info">Abrir Módulo</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Terminal de Eventos do Sistema SSE -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header justify-content-between">
+    <h3 class="card-title">
+      <i class="ti ti-terminal-2 me-2 text-success"></i>Terminal de Auditoria & Eventos em Tempo Real (SSE)
+    </h3>
+    <div class="d-flex align-items-center gap-2">
+      <span id="stream-status" class="badge bg-secondary-lt" style="font-size: 0.75rem;">Conectando...</span>
+      <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()" title="Limpar Terminal">
+        <i class="ti ti-trash me-1"></i>Limpar
+      </button>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="bg-dark text-light p-3" style="height: 180px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.8rem; overflow-y: auto;" id="devops-log">
+      <div class="text-secondary">[Hoshu SSE Terminal] Inicializando stream de eventos em tempo real...</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function renderStatusBadge(state) {
+    switch (state) {
+      case 'RUNNING':
+        return '<span class="badge bg-success"><i class="ti ti-check me-1"></i>Running</span>';
+      case 'STOPPED':
+        return '<span class="badge bg-secondary"><i class="ti ti-player-stop me-1"></i>Stopped</span>';
+      case 'START_PENDING':
+        return '<span class="badge bg-warning"><i class="ti ti-loader me-1"></i>Start Pending</span>';
+      case 'STOP_PENDING':
+        return '<span class="badge bg-warning"><i class="ti ti-loader me-1"></i>Stop Pending</span>';
+      default:
+        return `<span class="badge bg-danger">${state}</span>`;
+    }
+  }
+
+  async function refreshServices() {
+    try {
+      const res = await fetch('/api/services');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar serviços.');
+
+      let running = 0;
+      let stopped = 0;
+
+      data.services.forEach(svc => {
+        const col = document.getElementById(`status-col-${svc.id}`);
+        if (col) {
+          col.innerHTML = renderStatusBadge(svc.state);
+        }
+        if (svc.state === 'RUNNING') running++;
+        if (svc.state === 'STOPPED') stopped++;
+      });
+
+      const mRunning = document.getElementById('metric-running');
+      const mStopped = document.getElementById('metric-stopped');
+      if (mRunning) mRunning.innerText = running;
+      if (mStopped) mStopped.innerText = stopped;
+    } catch (err) {
+      console.error(err);
+      showToast('danger', 'Falha ao atualizar status', err.message);
+    }
+  }
+
+  async function executeServiceAction(serviceId, action) {
+    try {
+      const res = await fetch(`/api/services/${encodeURIComponent(serviceId)}/${action}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erro ao executar ${action}.`);
+      showToast('success', 'Comando Executado', `Serviço ${serviceId} — Novo estado: ${data.state}`);
+      await refreshServices();
+    } catch (err) {
+      showToast('danger', `Erro na ação '${action}'`, err.message);
+      await refreshServices();
+    }
+  }
+
+  function clearLogs() {
+    const logBox = document.getElementById('devops-log');
+    logBox.innerHTML = '<div class="text-secondary">[Hoshu SSE Terminal] Terminal limpo.</div>';
+  }
+
+  function appendLogLine(record) {
+    const logBox = document.getElementById('devops-log');
+    if (!logBox) return;
+    const entry = document.createElement('div');
+    entry.className = 'py-0';
+
+    let colorClass = 'text-light';
+    if (record.level === 'SUCCESS') colorClass = 'text-success';
+    else if (record.level === 'WARN') colorClass = 'text-warning';
+    else if (record.level === 'ERROR') colorClass = 'text-danger';
+    else if (record.level === 'INFO') colorClass = 'text-info';
+
+    const timeStr = record.timestamp ? `<span class="text-secondary me-1">[${record.timestamp}]</span>` : '';
+    const chStr = record.channel ? `<span class="text-muted me-1">[${record.channel}]</span>` : '';
+
+    entry.innerHTML = `${timeStr}${chStr}<span class="${colorClass}">${record.message}</span>`;
+    logBox.appendChild(entry);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function initLogStream() {
+    const statusBadge = document.getElementById('stream-status');
+    try {
+      const evtSource = new EventSource('/api/logs/stream');
+      evtSource.onopen = () => {
+        if (statusBadge) {
+          statusBadge.className = 'badge bg-success-lt';
+          statusBadge.innerHTML = '<span class="status-dot status-dot-animated bg-success me-1"></span>Conectado';
+        }
+      };
+      evtSource.onerror = () => {
+        if (statusBadge) {
+          statusBadge.className = 'badge bg-warning-lt';
+          statusBadge.innerHTML = '<span class="status-dot bg-warning me-1"></span>Reconectando...';
+        }
+      };
+      evtSource.addEventListener('connected', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          appendLogLine({ level: 'INFO', channel: 'stream', message: data.message, timestamp: '' });
+        } catch (_) {}
+      });
+      evtSource.addEventListener('log', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          appendLogLine(data);
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    } catch (_) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshServices();
+    initLogStream();
+  });
+</script>
+{% endblock %}
