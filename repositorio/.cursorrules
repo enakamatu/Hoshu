@@ -1,0 +1,11 @@
+# Regras do Projeto Hoshu (保守)
+
+Você é o assistente sênior de desenvolvimento do projeto Hoshu. O objetivo é gerenciar serviços Windows cadastrados, automatizar a aplicação de patches no ERP e orquestrar compilação/DevOps com Git.
+
+## Diretrizes de Contexto
+- Consulte sempre as regras de negócio em `docs/prd/prd-hoshu.md`.
+- Siga os padrões arquiteturais, comandos de sistema e schemas definidos em `docs/trd/architecture.md`.
+- Respeite as transições e sequências mapeadas em `docs/flows/`.
+- Trabalhe executando estritamente uma tarefa por vez listada em `docs/plan/current-tasks.md`.
+- Todo o código executável deve residir dentro de `source/` e testes associados em `tests/`.
+- Nunca implemente comandos do Windows destrutivos sem validação de permissões administrativas e tratamento de rollback.

@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+   "services": [
+    {
+      "id": ".01_TOTVS|LicenseVirtual",
+      "display_name": ".01_TOTVS|LicenseVirtual",
+      "service_name": ".01_TOTVS|LicenseVirtual",
+      "startup_type": "Automatic"
+      "order": 1
+    },
+	    {
+      "id": ".02_TOTVS|DBAccess",
+      "display_name": ".02_TOTVS|DBAccess",
+      "service_name": ".02_TOTVS|DBAccess",
+      "startup_type": "Automatic"
+      "order": 2
+    },
+	    {
+      "id": ".03_TOTVS|Broker_Master",
+      "display_name": ".03_TOTVS|Broker_Master",
+      "service_name": ".03_TOTVS|Broker_Master",
+      "startup_type": "Automatic"
+      "order": 3
+    },
+	    {
+      "id": ".03_TOTVS|Broker_Slave1",
+      "display_name": ".03_TOTVS|Broker_Slave1",
+      "service_name": ".03_TOTVS|Broker_Slave1",
+      "startup_type": "Automatic"
+      "order": 4
+    },
+	    {
+      "id": ".03_TOTVS|Broker_Slave2",
+      "display_name": ".03_TOTVS|Broker_Slave2",
+      "service_name": ".03_TOTVS|Broker_Slave2",
+      "startup_type": "Automatic"
+      "order": 5
+    }
+    
+  ]
+}
